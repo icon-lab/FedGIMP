@@ -72,7 +72,7 @@ class SubmitConfig(util.EasyDict):
         # run (set these)
         self.run_dir_root = ""  # should always be passed through get_path_from_template
         self.run_desc = ""
-        self.run_dir_ignore = ["__pycache__", "*.pyproj", "*.sln", "*.suo", ".cache", ".idea", ".vs", ".vscode", "datasets"]
+        self.run_dir_ignore = ["__pycache__", "*.pyproj", "*.sln", "*.suo", ".cache", ".idea", ".vs", ".vscode", "datasets", "results"]
         self.run_dir_extra_files = None
 
         # submit (set these)
