@@ -7,9 +7,8 @@ import dnnlib.tflib as tflib
 from skimage.metrics import peak_signal_noise_ratio as compute_psnr
 from skimage.metrics import structural_similarity as compute_ssim
 
-#----------------------------------------------------------------------------
-
-
+######################################################################################################################################################################
+#PROJECTOR CLASS FOR MULTICOIL INFERENCE
 class Projector:
     def __init__(self):
         self.num_steps                  = 1200
@@ -46,6 +45,8 @@ class Projector:
     def _info(self, *args):
         if self.verbose:
             print('Projector:', *args)
+######################################################################################################################################################################
+#FOURIER TRANSFORMATION FUNCTIONS FOR NUMPY ARRAYS AND TENSORS
 
     def fft2c_multi_np(self,im):
         array = []
@@ -86,6 +87,8 @@ class Projector:
         return np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(im))) 
     def ifft2c_np(self,d):
         return np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(d)))
+######################################################################################################################################################################
+#DEFINITION FOR LATENT VECTORS, NOISE PARAMETERS, AND TRAINED GENERATOR WEIGHTS 
 
     def set_network(self, G, dataset_name, minibatch_size=1):
         assert minibatch_size == 1
@@ -98,11 +101,11 @@ class Projector:
             self._G = self._G.clone()
 
         # Find dlatent stats.
-        if dataset_name == "fast_mri_brain":
+        if dataset_name == "fastMRI_brain":
             self._dlatent_avg = np.load('datasets/latents/fastMRI_latent.npy')
-        elif dataset_name == "umram_mri_brain":
+        elif dataset_name == "umram_brain":
             self._dlatent_avg = np.load('datasets/latents/umram_latent.npy')
-        elif dataset_name == "fast_mri_knee":
+        elif dataset_name == "fastMRI_knee":
             self._dlatent_avg = np.load('datasets/latents/fastMRI_knee_latent.npy')
         else:
             print("Unknown Client Detected")
@@ -110,7 +113,8 @@ class Projector:
             dlatent_avg1 = np.load('datasets/latents/umram_latent.npy')
             dlatent_avg2 = np.load('datasets/latents/fastMRI_knee_latent.npy')
             self._dlatent_avg = (dlatent_avg0 + dlatent_avg1 + dlatent_avg2)/3
-
+            
+        # Noise and weight optimization declarations
         self._info('Setting up noise inputs...')
         self._noise_vars = []
         noise_init_ops = []
@@ -118,6 +122,7 @@ class Projector:
         self.weights_ops = []
         self.initial_weights = []
         weight_init_ops = []
+        
         for w in self._G.vars:
             m = self._G.vars[w]
             m_copy = self.initial_G.vars[w]
@@ -140,9 +145,11 @@ class Projector:
         self._noise_init_op = tf.group(*noise_init_ops)
         self._noise_normalize_op = tf.group(*noise_normalize_ops)
 
-        # Image output graph.
+        # Network output expressions
         self._info('Building image output graph...')
+        # Input latent placeholder
         self._dlatents_var = tf.compat.v1.Variable(tf.ones([1,512]),name = 'dlatents_var')
+        # Undersampling mask placeholder wrt contrast - represents site specific imaging operator dependent on acc rate and undersampling pattern
         if self.contrast == 'T1f' or self.contrast=='FLAIRf':
             self.mask = tf.compat.v1.Variable(tf.zeros([320,256], dtype=tf.complex64), trainable=False, dtype=tf.complex64)
         elif self.contrast == 'T2f':
@@ -155,33 +162,40 @@ class Projector:
         self.pad_x = int((512 - self.mask.shape[0]) // 2)
         self.pad_y = int((512 - self.mask.shape[1]) // 2)
         self.coil_map = tf.compat.v1.Variable(tf.zeros([(512- 2 * self.pad_x) ,(512- 2 * self.pad_y) ,5], dtype=tf.complex64), trainable=False, dtype=tf.complex64)
-
+        # Input noise placeholder
         self._noise_in = tf.compat.v1.placeholder(tf.float32, [], name='noise_in')
+        # One-hot coded vector placeholder to carry out site information
         self.labels = tf.compat.v1.Variable(tf.zeros([1,3]),name = 'labels', trainable=False)
-        
+        # Generate fake images from Generator network based on input latent and label
         self._images_expr = self._G.get_output_for(self._dlatents_var, self.labels, randomize_noise=False)
-        # Loss graph.
+        # K-space loss and gradient loss definitions
         self._info('Building loss graph...')
+        # Generate real&imag channel concatenated fully sampled(target) image
         self._target_images_var = tf.compat.v1.Variable(tf.zeros(self._images_expr.shape), name='target_images_var')
         self.us_image = tf.compat.v1.Variable(tf.zeros(self.coil_map.shape, dtype=tf.complex64),name='us_image_var', dtype=tf.complex64)
-
+        # Convert target image to complex variable
         self.target_images_var_complex = tf.squeeze(tf.complex(self._target_images_var[:,0,:,:], self._target_images_var[:,1,:,:]))
         self.target_images_var_complex = tf.stack([self.target_images_var_complex,self.target_images_var_complex,self.target_images_var_complex,self.target_images_var_complex,self.target_images_var_complex],axis=2)
         self.target_images_var_complex = self.target_images_var_complex[self.pad_x:(512-self.pad_x), self.pad_y:(512-self.pad_y), :]
         self.full_org_image_coil_separate = tf.compat.v1.math.multiply(self.target_images_var_complex, self.coil_map)
         self.coil_seperate_mask = tf.stack([self.mask, self.mask, self.mask, self.mask, self.mask], axis=2)
+        # Target fully sampled-coil seperate k-space
         self.full_kspace_org_image_coil_separate = self.fft2c_multi(self.full_org_image_coil_separate)
         self.undersampled_kspace_org_image_coil_separate = tf.compat.v1.math.multiply(self.full_kspace_org_image_coil_separate ,self.coil_seperate_mask) 
-
+        # Generate network output fake image in desired data range
         self.proc_images_expr_complex = tf.squeeze(tf.complex(self._images_expr[:,0,:,:],self._images_expr[:,1,:,:]))
         self.proc_images_expr_complex = self.proc_images_expr_complex[self.pad_x:(512-self.pad_x), self.pad_y:(512-self.pad_y)]
         self.proc_images_expr_complex = tf.stack([self.proc_images_expr_complex,self.proc_images_expr_complex,self.proc_images_expr_complex,self.proc_images_expr_complex,self.proc_images_expr_complex],axis=2)
         self.proc_images_expr_complex_coil_separate = tf.compat.v1.math.multiply(self.proc_images_expr_complex, self.coil_map)
+        # Generate fully sampled k-space
         self.full_kspace_gen_image = self.fft2c_multi(self.proc_images_expr_complex_coil_separate)
+        # Generate network output fake image's k-space
         self.undersampled_kspace_gen_image_coil_separate = tf.math.multiply(self.full_kspace_gen_image,self.coil_seperate_mask)
         diff = self.undersampled_kspace_org_image_coil_separate - self.undersampled_kspace_gen_image_coil_separate
         self.Kloss = tf.math.sqrt(tf.compat.v1.reduce_mean( tf.math.square(tf.math.real(diff)) + tf.math.square(tf.math.imag(diff)) ))
+        # Define gradient loss to prevent noise amplification
         self.TVloss = tf.compat.v1.reduce_sum(tf.compat.v1.image.total_variation(self.proc_images_expr_complex_coil_separate))
+        # Combine both losses 
         self._loss = self.Kloss  + 0.0001*self.TVloss
 
         # Optimizer.
