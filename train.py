@@ -68,7 +68,7 @@ else:
 
 ######################################################################################################################################################################
 #DETERMINE WHETHER THE SITE INFORMATION WILL BE INHERITED BY THE NETWORK
-if 0:
+if 1:
     desc += '-cond'; dataset.max_label_size = 'full' # conditioned on full label
 else:
     desc += '-uncond'; dataset.max_label_size = 0 # conditioned on full label
