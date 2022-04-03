@@ -8,7 +8,7 @@ import os
 
 ######################################################################################################################################################################
 #DESCRIPTION LABEL TO RESULT FOLDER AND DICTIONARIES TO STORE TRAINING AND SCHEDULING OPTIONS
-desc          = 'FedGIMP-864'                                                             
+desc          = 'FedGIMP'                                                             
 train         = EasyDict(run_func_name='training.training_loop.training_loop')         
 sched         = EasyDict()                                                             
 submit_config = dnnlib.SubmitConfig()                                                  
@@ -26,7 +26,7 @@ train.resume_kimg = 0.0 # thousands of images
 
 ######################################################################################################################################################################
 #NUMBER OF SLICES PER LOCAL SITE
-slice_per_client = 0.864 # thousands of images
+slice_per_client = 0.864 # thousands of images: 0.84 for singlecoil, 0.864 for multicoil in the example training set
 
 ######################################################################################################################################################################
 #NUMBER OF GPUS TO USE AND DEFAULT SCHEDULING PARAMETERS FOR STYLE-BASED GENERATOR
@@ -54,15 +54,15 @@ else:
 dataset       = EasyDict()                                                             
 if 0:
     desc += '-singlecoil'; dataset.coil_case = "singlecoil"
-    dataset.client1_path = "TFRECORDS DATA PATH 1"    
-    dataset.client2_path = "TFRECORDS DATA PATH 2"      
-    dataset.client3_path = "TFRECORDS DATA PATH 3"    
+    dataset.client1_path = "datasets/TFRecords/singlecoil/IXI/train/"    
+    dataset.client2_path = "datasets/TFRecords/singlecoil/fastMRI/train/"      
+    dataset.client3_path = "datasets/TFRecords/singlecoil/brats/train/"    
     sched.lod_initial_resolution = 256; 
 else:
     desc += '-multicoil'; dataset.coil_case = "multicoil"
-    dataset.client1_path = "TFRECORDS DATA PATH 1"    
-    dataset.client2_path = "TFRECORDS DATA PATH 2"      
-    dataset.client3_path = "TFRECORDS DATA PATH 3" 
+    dataset.client1_path = "datasets/TFRecords/multicoil/fastMRI_brain/train/"    
+    dataset.client2_path = "datasets/TFRecords/multicoil/fastMRI_knee/train/"      
+    dataset.client3_path = "datasets/TFRecords/multicoil/umram_brain/train/" 
     sched.lod_initial_resolution = 512;  
 
 
@@ -75,7 +75,7 @@ else:
     
 ######################################################################################################################################################################
 #GENERATE RESULT DIRECTORY TO SAVE NETWORK SNAPSHOTS AND GENERATED PRIORS
-result_dir = 'ENTER RESULT DIRECTORY'
+result_dir = 'results/training/'
 
 if not os.path.exists(result_dir):
     os.makedirs(result_dir)
