@@ -1,4 +1,3 @@
-﻿
 import types
 import inspect
 import re
@@ -325,82 +324,15 @@ class Network:
         net._init_graph()
         net.copy_vars_from(self)
         return net
-
     
-    def aggregate_networks(self, net0: "Network", net1: "Network", net2: "Network") -> None:
-        names = [name for name in net0.vars.keys() if name in net0.vars]
-        # print(names)
-        # inv_chance = random.randint(0, 2)
-        # if inv_chance == 1:
-        #     tfutil.set_vars(tfutil.run({self.vars[name]: self.vars[name] + ( (net0.vars[name] - self.vars[name]) + (make_variables(net1.vars[name].shape, tf.float32, tf.random_normal_initializer(mean=0.0, stddev=1, seed=None)) + net1.vars[name] - self.vars[name]) + (net2.vars[name] - self.vars[name]) )/3 for name in names}))
-        #     print("fastMRI client noisy update")
-        # else:
-        tfutil.set_vars(tfutil.run({self.vars[name]: self.vars[name] + ( (net0.vars[name] - self.vars[name]) + (net1.vars[name] - self.vars[name]) + (net2.vars[name] - self.vars[name]) )/3 for name in names}))
-        
     def aggregate_networks_parametric(self, client_args, client_num) -> None:
         names = [name for name in self.vars.keys() if name in self.vars]
-        # prev_G_global = {}; prev_G_c1={};prev_G_c2={};prev_G_c3={};
-        # after_G_global = {}; after_G_c1={};after_G_c2={};after_G_c3={};
-        # for name in names:
-        #     prev_G_global[name] = self.vars[name].eval()
-        #     prev_G_c1[name] = client_args["client1_G"].vars[name].eval()
-        #     prev_G_c2[name] = client_args["client2_G"].vars[name].eval()
-            # prev_G_c3[name] = client_args["client3_G"].vars[name].eval()
-            # print("Prev Global G: ", self.vars[name].eval())
-            # print("Prev Client 1 G: ", client_args["client1_G"].vars[name].eval())
-            # print("Prev Client 2 G: ", client_args["client2_G"].vars[name].eval())
-            # print("Prev Client 3 G: ", client_args["client3_G"].vars[name].eval())
+        
         self.copy_vars_from(client_args["client1_G"])
         for client in range(2,client_num+1):         
             tfutil.set_vars(tfutil.run({self.vars[name]: self.vars[name] + client_args["client%d_G"%client].vars[name] for name in names}))
         tfutil.set_vars(tfutil.run({self.vars[name]: self.vars[name]/client_num for name in names}))
-        # for name in names:
-        #     after_G_global[name] = self.vars[name].eval()
-        #     after_G_c1[name] = client_args["client1_G"].vars[name].eval()
-        #     after_G_c2[name] = client_args["client2_G"].vars[name].eval()
-            # after_G_c3[name] = client_args["client3_G"].vars[name].eval()
-            # print("After Global G: ", self.vars[name].eval())
-            # print("After Client 1 G: ", client_args["client1_G"].vars[name].eval())
-            # print("After Client 2 G: ", client_args["client2_G"].vars[name].eval())
-            # print("After Client 3 G: ", client_args["client3_G"].vars[name].eval())
-        # from training import misc
-        # misc.save_pkl((prev_G_global,prev_G_c1,prev_G_c2,prev_G_c3,after_G_global,after_G_c1,after_G_c2,after_G_c3), '/auto/data2/gelmas/results/stylegan-github/control-multi.pkl' )
-        # print("Done")
-        # print("Averaged Layers", len(net0.vars.keys()), " ", len(self.vars.keys()))
-        # for name in names:
-        #     print("G: ", self.vars[name])
-        # print("Done")
-    def aggregate_networks_momentum(self, net0: "Network", net1: "Network", net2: "Network", beta) -> None:
-        names = [name for name in net0.vars.keys() if name in net0.vars]
-        # print(names)
-        # inv_chance = random.randint(0, 2)
-        # if inv_chance == 1:
-        #     tfutil.set_vars(tfutil.run({self.vars[name]: self.vars[name] + ( (net0.vars[name] - self.vars[name]) + (make_variables(net1.vars[name].shape, tf.float32, tf.random_normal_initializer(mean=0.0, stddev=1, seed=None)) + net1.vars[name] - self.vars[name]) + (net2.vars[name] - self.vars[name]) )/3 for name in names}))
-        #     print("fastMRI client noisy update")
-        # else:
-        for name in names:
-            if (not np.all(self.vars[name].eval() == net0.vars[name].eval())) and name != "lod":
-                tfutil.set_vars(tfutil.run({self.vars[name]: beta*self.vars[name] + (1-beta)*( (net0.vars[name] - self.vars[name]) + (net1.vars[name] - self.vars[name]) + (net2.vars[name] - self.vars[name]) )/3}))
-            else:
-                tfutil.set_vars(tfutil.run({self.vars[name]: self.vars[name] + ( (net0.vars[name] - self.vars[name]) + (net1.vars[name] - self.vars[name]) + (net2.vars[name] - self.vars[name]) )/3}))
         
-        # print("Averaged Layers", len(net0.vars.keys()), " ", len(self.vars.keys()))
-        # for name in names:
-        #     print("G: ", self.vars[name])
-        # print("Done")
-        
-    def sum_networks(self, net0: "Network", net1: "Network", net2: "Network") -> None:
-        names = [name for name in net0.own_vars.keys() if name in net0.own_vars]
-        # inv_chance = random.randint(0, 2)
-        # if inv_chance == 1:
-        #     tfutil.set_vars(tfutil.run({self.vars[name]: self.vars[name] + ( (net0.vars[name] - self.vars[name]) + (make_variables(net1.vars[name].shape, tf.float32, tf.random_normal_initializer(mean=0.0, stddev=1, seed=None)) + net1.vars[name] - self.vars[name]) + (net2.vars[name] - self.vars[name]) )/3 for name in names}))
-        #     print("fastMRI client noisy update")
-        # else:
-        for name in names:
-            tfutil.set_vars(tfutil.run({self.vars[name]: net0.vars[name] + net1.vars[name] for name in names}))
-        for name in names:
-            print("First: ", net0.vars[name], "\nSecond: ", net1.vars[name],"\nRes:", self.vars[name] )
-        return 0
 
     def copy_own_vars_from(self, src_net: "Network") -> None:
         """Copy the values of all variables from the given network, excluding sub-networks."""
@@ -410,28 +342,7 @@ class Network:
     def copy_vars_from(self, src_net: "Network") -> None:
         """Copy the values of all variables from the given network, including sub-networks."""
         names = [name for name in self.vars.keys() if name in src_net.vars]
-        # print("Broadcasted Layers", len(self.vars.keys()), " ", len(src_net.vars.keys()))
-        # for name in names:
-        #     print("G: ", self.vars[name])
-        # print("Done")
         tfutil.set_vars(tfutil.run({self.vars[name]: src_net.vars[name] for name in names}))
-        
-    def isequal(self, src_net: "Network", src_net1: "Network", src_net2: "Network") -> None:
-        
-        names = [name for name in self.vars.keys() if name in src_net.vars]
-        
-        for name in names:
-            # if (np.all(self.vars[name].eval() == src_net.vars[name].eval())) and(np.all(self.vars[name].eval() == src_net1.vars[name].eval())) and (np.all(self.vars[name].eval() == src_net2.vars[name].eval())):
-            # if (np.all(self.vars[name].eval() != src_net.vars[name].eval())) :
-                print("Gs_new: ", self.vars[name].eval())
-                print("Gs_prev: ", src_net.vars[name].eval())
-                print("G: ", src_net1.vars[name].eval())
-            #     print(name, " okay")
-            # else:
-            #     print(name," not okay")
-            # print("t = ", (self.vars[name].eval() - src_net.vars[name].eval())/(src_net1.vars[name].eval() - src_net.vars[name].eval()))
-        print("Done")
-        return 0
         
 
     def copy_trainables_from(self, src_net: "Network") -> None:
