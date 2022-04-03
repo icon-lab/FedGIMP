@@ -8,10 +8,15 @@ from training import misc
 import warnings
 warnings.filterwarnings("ignore")
 
+######################################################################################################################################################################
+#FOURIER TRANSFORMATION FUNCTIONS FOR NUMPY ARRAYS
+
 def fft2c(im):
     return np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(im))) 
 def ifft2c(d):
     return np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(d)))
+######################################################################################################################################################################
+#MAIN PROJECTOR LOOP
 
 def project_image(proj, targets, png_prefix, num_snapshots, mask, contrast, labels, case, coil_map = None, pad_x = None, pad_y = None):
     snapshot_steps = set(proj.num_steps - np.linspace(0, proj.num_steps, num_snapshots, endpoint=False, dtype=int))
@@ -48,18 +53,19 @@ def project_image(proj, targets, png_prefix, num_snapshots, mask, contrast, labe
             np.save(png_prefix + '-untouched_images.npy', untouched_images)
     return psnr,ssim
 
-
+######################################################################################################################################################################
+#MULTICOIL PROJECTOR
 
 def project_multicoil_images(args):
     from training import dataset_float as dataset
     import projector_multicoil as projector
     
     contrast_list = []
-    if args['dataset_name'] == 'fast_mri_brain':
+    if args['dataset_name'] == 'fastMRI_brain':
         contrast_list = ['T1f','T2f','FLAIRf']
-    if args['dataset_name'] == 'fast_mri_knee':
+    if args['dataset_name'] == 'fastMRI_knee':
         contrast_list = ['PDf','PDFSf']
-    elif args['dataset_name'] == 'umram_mri_brain':
+    elif args['dataset_name'] == 'umram_brain':
         contrast_list = ['T1u', 'T2u', 'PDu']
     else:
         print("Please update the datasets")
@@ -72,7 +78,7 @@ def project_multicoil_images(args):
     avg_ssim = 0
     for contrast_ind in range(len(contrast_list)):
         contrast = contrast_list[contrast_ind]
-        filename = args['h5_dir']+ args['dataset_name'] + "/" + contrast[:-1] + "/" + contrast[:-1] + "_under_sampled_" + args['acc_rate'] + "x_multicoil_test.mat"
+        filename = args['h5_dir']+ args['dataset_name'] + "/" + contrast[:-1] + "_under_sampled_" + args['acc_rate'] + "x_multicoil_test.mat"
         
         proj = projector.Projector()
         proj.contrast = contrast
@@ -112,7 +118,9 @@ def project_multicoil_images(args):
     
     np.save(args["result_dir"]+'/psnr.npy', psnr)
     np.save(args["result_dir"]+'/ssim.npy', ssim)
-    
+
+######################################################################################################################################################################
+#SINGLECOIL PROJECTOR
     
 def project_singlecoil_images(args):
     from training import dataset as dataset
@@ -158,7 +166,8 @@ def project_singlecoil_images(args):
     np.save(args["result_dir"]+'/psnr.npy', psnr)
     np.save(args["result_dir"]+'/ssim.npy',ssim)
 
-# #----------------------------------------------------------------------------
+######################################################################################################################################################################
+#ARGUMENT PARSER
 
 def main():
     parser = argparse.ArgumentParser(
