@@ -7,7 +7,7 @@ Example Training & Test Sets: https://drive.google.com/drive/folders/1_n8JynaPRQ
 
 Pretrained Network: https://drive.google.com/drive/folders/15FiUVr7w3NmW92PFc-tQPJA_sfUta2aF?usp=sharing
 
-If you are using Anaconda, you can export the required virtual environment from "environment.yaml" file with `$ conda env create -f environment.yaml` command.
+If you are using Anaconda, you can import the required virtual environment from "environment.yaml" file with `$ conda env create -f environment.yaml` command.
 
 Edit lines 29 and 55 in `train.py` to switch between singlecoil and multicoil trainings, multicoil is set by default. Configure & Run `train.py` directly.
 
